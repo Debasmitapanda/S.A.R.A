@@ -2,11 +2,11 @@ from flask import Flask, request, jsonify, send_from_directory, send_file
 import os
 import shutil
 from werkzeug.utils import secure_filename
-from inference import run_inference   # 👈 must exist in your inference.py
+from inference import run_inference   # must exist in your inference.py
 import base64
 import pandas as pd
 from flask_cors import CORS
-from pdf_generator import generate_report_pdf   # 👈 must exist in pdf_generator.py
+from pdf_generator import generate_report_pdf   # must exist in pdf_generator.py
 
 # ---------------- Configuration ----------------
 UPLOAD_FOLDER = "uploads"
@@ -15,7 +15,7 @@ ALLOWED_EXTENSIONS = {"csv", "json"}
 
 app = Flask(__name__)
 
-# ✅ Allow frontend to access API
+# Allow frontend to access API
 CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173", "http://127.0.0.1:5174"]}})
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -79,7 +79,7 @@ def analyze():
             return jsonify({"error": "No file part in the request"}), 400
 
         file = request.files["file"]
-        amendment_id = request.form.get("amendmentId")  # 👈 frontend must send this
+        amendment_id = request.form.get("amendmentId")  # frontend must send this
         if not amendment_id:
             return jsonify({"error": "Missing amendmentId"}), 400
 
@@ -95,7 +95,7 @@ def analyze():
         os.makedirs(amendment_upload_folder, exist_ok=True)
         os.makedirs(amendment_output_folder, exist_ok=True)
 
-        # Clear old data in that amendment’s folders
+        # Clear old data in that amendment's folders
         clear_folder(amendment_upload_folder)
         clear_folder(amendment_output_folder)
 

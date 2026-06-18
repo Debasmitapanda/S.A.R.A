@@ -133,11 +133,11 @@ def extract_keyword(text, tokenizer):
 def generate_wordcloud(data, title, filename):
     try:
         if data is None or len(data) == 0:
-            print(f"⚠ No data for {title}, skipping WordCloud.")
+            print(f"[WARN] No data for {title}, skipping WordCloud.")
             return
         text = " ".join(data).strip()
         if not text:
-            print(f"⚠ Empty text after cleaning for {title}, skipping WordCloud.")
+            print(f"[WARN] Empty text after cleaning for {title}, skipping WordCloud.")
             return
         wc = WordCloud(width=800, height=400, background_color="white").generate(text)
         plt.figure(figsize=(8, 4))
@@ -146,9 +146,9 @@ def generate_wordcloud(data, title, filename):
         plt.title(title)
         plt.savefig(filename)
         plt.close()
-        print(f"✅ WordCloud saved: {filename}")
+        print(f"[SUCCESS] WordCloud saved: {filename}")
     except Exception as e:
-        print(f"⚠ WordCloud generation failed for {title}: {e}")
+        print(f"[WARN] WordCloud generation failed for {title}: {e}")
 
 # =======================
 # Template Summary
@@ -198,8 +198,12 @@ def run_inference(input_csv, output_csv):
 
     amendment_name = os.path.splitext(os.path.basename(input_csv))[0].replace("_", " ").title()
 
-    if 'Comment' in df.columns:
+    # Deduplicate columns if any exist
+    df = df.loc[:, ~df.columns.duplicated()]
+
+    if 'Comment' in df.columns and 'tweet' not in df.columns:
         df = df.rename(columns={'Comment': 'tweet'})
+        
     if 'tweet' not in df.columns:
         raise ValueError("Input CSV/JSON must have a 'Comment' or 'tweet' column")
 
@@ -249,25 +253,25 @@ def run_inference(input_csv, output_csv):
     # keep only required columns
     output_df = df[['Author', 'Date', 'tweet', 'label', 'key_word']]
     output_df.to_csv(output_csv, index=False, encoding='utf-8')
-    print(f"✅ Predictions saved to {output_csv}")
-
+    print(f"[SUCCESS] Predictions saved to {output_csv}")
+    
     counts = df['sentiment'].value_counts().to_dict()
     print("\nSentiment Counts:")
     print(f"Negative: {counts.get('Negative',0)}, Neutral: {counts.get('Neutral',0)}, Positive: {counts.get('Positive',0)}")
-
+    
     # Sequential wordclouds
     print("Generating WordClouds sequentially...")
     generate_wordcloud(df[df['label']==0]['clean_tweet'], "Negative WordCloud", os.path.join(os.path.dirname(output_csv), "negative_wc.png"))
     generate_wordcloud(df[df['label']==1]['clean_tweet'], "Neutral WordCloud", os.path.join(os.path.dirname(output_csv), "neutral_wc.png"))
     generate_wordcloud(df[df['label']==2]['clean_tweet'], "Positive WordCloud", os.path.join(os.path.dirname(output_csv), "positive_wc.png"))
-    print("✅ Wordclouds generated")
+    print("[SUCCESS] Wordclouds generated")
 
     print("\nGenerating AI-Generated Summaries...")
     negative_summary = generate_template_summary(df[df['label']==0]['clean_tweet'], "Negative", counts.get("Negative",0), amendment_name)
     neutral_summary  = generate_template_summary(df[df['label']==1]['clean_tweet'], "Neutral", counts.get("Neutral",0), amendment_name)
     positive_summary = generate_template_summary(df[df['label']==2]['clean_tweet'], "Positive", counts.get("Positive",0), amendment_name)
 
-    print("\n📄 AI-Generated Summaries:")
+    print("\n[SUMMARY] AI-Generated Summaries:")
     print(negative_summary)
     print(neutral_summary)
     print(positive_summary)
