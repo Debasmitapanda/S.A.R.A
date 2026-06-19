@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Notifications } from "@mui/icons-material";
+import { Notifications, Delete } from "@mui/icons-material";
 import CommentUpload from "./components/CommentsUpload";
 import CommentsPage from "./CommentsPage";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +24,7 @@ export default function Amendments() {
     JSON.parse(localStorage.getItem("savedResults")) || {}
   );
   const [loader, setLoader] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
 
   const getAmends = async () => {
     try {
@@ -35,6 +36,79 @@ export default function Amendments() {
       }
     } catch (e) {
       toast.error("Error occurred: " + e.message);
+    } finally {
+      setLoader(false);
+    }
+  };
+
+  const handleAddAmendment = async (e) => {
+    e.preventDefault();
+    if (!newTitle.trim()) {
+      toast.error("Please enter a valid title");
+      return;
+    }
+
+    // Auto-generate unique aId based on maximum existing aId
+    let maxNum = 100;
+    amendments.forEach(item => {
+      const match = item.aId.match(/^A-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) {
+          maxNum = num;
+        }
+      }
+    });
+    const newAId = `A-${maxNum + 1}`;
+
+    try {
+      setLoader(true);
+      const res = await fetch("http://localhost:3000/api/amend/addAmend", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          aId: newAId,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.status === 201) {
+        toast.success("Amendment added successfully!");
+        setNewTitle("");
+        getAmends(); // reload the list
+      } else {
+        toast.error(data.message || "Failed to add amendment");
+      }
+    } catch (err) {
+      toast.error("Error occurred: " + err.message);
+    } finally {
+      setLoader(false);
+    }
+  };
+
+  const handleDeleteAmendment = async (aId) => {
+    if (!window.confirm("Are you sure you want to delete this amendment?")) {
+      return;
+    }
+
+    try {
+      setLoader(true);
+      const res = await fetch(`http://localhost:3000/api/amend/${aId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (res.status === 200) {
+        toast.success("Amendment deleted successfully!");
+        getAmends(); // reload the list
+      } else {
+        toast.error(data.message || "Failed to delete amendment");
+      }
+    } catch (err) {
+      toast.error("Error occurred: " + err.message);
     } finally {
       setLoader(false);
     }
@@ -182,15 +256,34 @@ export default function Amendments() {
                 Review and manage proposed amendments.
               </p>
             </div>
-            <a
-              href="https://www.mca.gov.in/content/mca/global/en/home.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:to-indigo-600 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-blue-500"
-            >
-              <OpenInNewIcon fontSize="small" />
-              <span>Go to MCA Portal</span>
-            </a>
+            <div className="flex items-center gap-4">
+              <form onSubmit={handleAddAmendment} className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                <input
+                  type="text"
+                  placeholder="Enter custom amendment title..."
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="px-3 py-1.5 text-sm bg-transparent border-0 focus:outline-none focus:ring-0 w-64 text-slate-800"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center gap-1 rounded-md bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-sm font-semibold text-white shadow-md transition-all"
+                >
+                  <span>+ Add</span>
+                </button>
+              </form>
+
+              <a
+                href="https://www.mca.gov.in/content/mca/global/en/home.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:to-indigo-600 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+              >
+                <OpenInNewIcon fontSize="small" />
+                <span>Go to MCA Portal</span>
+              </a>
+            </div>
           </div>
 
           <motion.div
@@ -272,7 +365,7 @@ export default function Amendments() {
                         {/* Actions Column */}
 
                         <td className="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 flex gap-2 justify-end">
-                          <CommentUpload aId={item.aId} />
+                          <CommentUpload item={item} />
                           <button
                             onClick={() => downloadPDF(item.title, item.aId)}
                             disabled={item.mlData?.summaries?.neutral?.length === 0}
@@ -283,6 +376,13 @@ export default function Amendments() {
                             }
                           >
                             Download Report
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAmendment(item.aId)}
+                            className="inline-flex items-center justify-center p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 transition-all shadow-sm"
+                            title="Delete Amendment"
+                          >
+                            <Delete fontSize="small" />
                           </button>
                         </td>
                       </tr>

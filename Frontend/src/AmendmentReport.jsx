@@ -75,18 +75,17 @@ export default function AmendmentReport() {
   // --- 2. FILE LOADING EFFECT (NEW) ---
   // This effect runs ONCE on component mount to find and set the CSV file.
   useEffect(() => {
-    let fileToLoad = location.state?.csvFile;
+    // Try to load from localStorage first to pick up any newly added comments
+    const fileContent = localStorage.getItem("csvFileContent");
+    const fileName = localStorage.getItem("csvFileName");
+    const fileType = localStorage.getItem("csvFileType");
 
-    // If file is not in state (e.g., page refresh), reconstruct from localStorage
-    if (!fileToLoad) {
-      const fileContent = localStorage.getItem("csvFileContent");
-      const fileName = localStorage.getItem("csvFileName");
-      const fileType = localStorage.getItem("csvFileType");
-
-      if (fileContent && fileName && fileType) {
-        fileToLoad = new File([fileContent], fileName, { type: fileType });
-        console.log("CSV file reconstructed from localStorage.");
-      }
+    let fileToLoad = null;
+    if (fileContent && fileName && fileType) {
+      fileToLoad = new File([fileContent], fileName, { type: fileType });
+      console.log("CSV file reconstructed from localStorage.");
+    } else {
+      fileToLoad = location.state?.csvFile;
     }
 
     if (fileToLoad) {
@@ -194,6 +193,17 @@ export default function AmendmentReport() {
               // Set the parsed data into state for the popup to use
               setCsvData(jsonData);
               console.log("Parsed CSV data for popup:", jsonData);
+
+              // Also save the predicted comments (including labels and keywords) to MongoDB
+              try {
+                await fetch(`http://localhost:3000/api/amend/${Id}/saveComments`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ comments: jsonData }),
+                });
+              } catch (dbSaveErr) {
+                console.error("Failed to save predicted comments in DB:", dbSaveErr);
+              }
             } catch (csvError) {
               console.error(
                 "Failed to fetch or parse the processed CSV:",
