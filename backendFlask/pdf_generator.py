@@ -64,7 +64,7 @@ def generate_report_pdf(amendment_id, amendment_title, counts, percentages, keyw
         elements.append(Paragraph(f"<b>{sentiment.capitalize()}:</b> {summary}", custom_style))
         elements.append(Spacer(1, 1))
 
-    # Generate Pie Chart image using Matplotlib
+    # Generate Pie Chart image using Matplotlib -
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
