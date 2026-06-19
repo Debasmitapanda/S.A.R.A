@@ -100,6 +100,46 @@ const getMlResult = async (req, res) => {
   }
 };
 
+const saveComments = async (req, res) => {
+  const { aId } = req.params;
+  const { comments } = req.body;
 
+  try {
+    await connectDB();
+    const existing = await Amendment.findOne({ aId });
+    if (!existing) {
+      return res.status(404).json({ error: "No such Amendment found" });
+    }
 
-module.exports = { addAmendment, getAmend,saveMLResult,getMlResult };
+    existing.comments = comments || [];
+    await existing.save();
+    return res.status(200).json({
+      message: "Comments saved successfully",
+      amendment: existing
+    });
+  } catch (e) {
+    console.error("Error saving comments:", e);
+    return res.status(500).json({ error: "Error saving comments", details: e.message });
+  }
+};
+
+const deleteAmendment = async (req, res) => {
+  const { aId } = req.params;
+
+  try {
+    await connectDB();
+    const result = await Amendment.findOneAndDelete({ aId });
+
+    if (!result) {
+      return res.status(404).json({ message: "Amendment not found" });
+    }
+
+    res.status(200).json({ message: "Amendment deleted successfully" });
+  } catch (e) {
+    console.error("Error deleting amendment:", e);
+    res.status(500).json({ message: e.message || e });
+  }
+};
+
+module.exports = { addAmendment, getAmend, saveMLResult, getMlResult, saveComments, deleteAmendment };
+

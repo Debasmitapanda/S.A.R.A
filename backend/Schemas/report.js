@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const AmendmentSchema = new mongoose.Schema({
   title: { type: String, required: true, unique: true }, // Amendment title
   aId: { type: String, required: true, unique: true },   // Amendment ID
+  comments: { type: Array, default: [] }, // Persisted comments
 
   mlData: {
     output_csv: { type: String, default: "" }, // Path or CSV string
